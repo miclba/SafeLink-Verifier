@@ -7,46 +7,22 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
   ShieldCheck, 
-  ShieldAlert, 
-  Search, 
-  ExternalLink, 
-  Lock, 
   Globe, 
-  CheckCircle2, 
   AlertTriangle,
   Loader2,
   ArrowRight,
-  Info
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Markdown from 'react-markdown';
 import { cn } from './utils';
 import { Tooltip } from './components/Tooltip';
-
-interface SafetyReport {
-  isSafe: boolean;
-  safetyScore: number; // 0-100
-  verdict: string;
-  explanation: string;
-  riskFactors: string[];
-  reassuringPoints: string[];
-  domainInfo: {
-    name: string;
-    isWellKnown: boolean;
-    category: string;
-  };
-  vtStats?: {
-    harmless: number;
-    malicious: number;
-    suspicious: number;
-    undetected: number;
-  };
-}
+import { SecurityReport } from './components/SecurityReport';
+import { SafetyReportData } from './types';
 
 export default function App() {
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [report, setReport] = useState<SafetyReport | null>(null);
+  const [report, setReport] = useState<SafetyReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
 
@@ -273,184 +249,9 @@ export default function App() {
             )}
 
             {/* Report Result */}
-            {report && !isAnalyzing && (() => {
-              const isSuspicious = report.safetyScore >= 40 && report.safetyScore < 80;
-              const isUnsafe = report.safetyScore < 40 || !report.isSafe;
-              const isSafe = report.isSafe && report.safetyScore >= 80;
-
-              let statusColor = "emerald";
-              let StatusIcon = ShieldCheck;
-              let statusLabel = "Bezpečné";
-
-              if (isUnsafe) {
-                statusColor = "red";
-                StatusIcon = ShieldAlert;
-                statusLabel = "Nebezpečné";
-              } else if (isSuspicious) {
-                statusColor = "amber";
-                StatusIcon = AlertTriangle;
-                statusLabel = "Podozrivé";
-              }
-
-              return (
-                <motion.div 
-                  key="report"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "mt-10 rounded-2xl overflow-hidden border shadow-sm",
-                    statusColor === "emerald" ? "border-emerald-100 bg-emerald-50/30" : 
-                    statusColor === "amber" ? "border-amber-100 bg-amber-50/30" : 
-                    "border-red-100 bg-red-50/30"
-                  )}
-                >
-                  <div className={cn(
-                    "p-6 flex flex-col sm:flex-row sm:items-center gap-4 border-b",
-                    statusColor === "emerald" ? "border-emerald-100" : 
-                    statusColor === "amber" ? "border-amber-100" : 
-                    "border-red-100"
-                  )}>
-                    <div className={cn(
-                      "p-3 rounded-xl self-start",
-                      statusColor === "emerald" ? "bg-emerald-100 text-emerald-600" : 
-                      statusColor === "amber" ? "bg-amber-100 text-amber-600" : 
-                      "bg-red-100 text-red-600"
-                    )}>
-                      <StatusIcon className="w-8 h-8" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold text-slate-900">{report.verdict}</h3>
-                        <span className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                          statusColor === "emerald" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : 
-                          statusColor === "amber" ? "bg-amber-100 text-amber-700 border-amber-200" : 
-                          "bg-red-100 text-red-700 border-red-200"
-                        )}>
-                          {statusLabel}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Tooltip content={`Bezpečnostné skóre: ${report.safetyScore}/100`}>
-                          <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden cursor-help">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${report.safetyScore}%` }}
-                              className={cn(
-                                "h-full",
-                                statusColor === "emerald" ? "bg-emerald-500" : 
-                                statusColor === "amber" ? "bg-amber-500" : "bg-red-500"
-                              )}
-                            />
-                          </div>
-                        </Tooltip>
-                        <span className="text-xs font-semibold text-slate-500">{report.safetyScore}/100 Skóre</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Analýza</h4>
-                      <div className="text-slate-700 text-sm leading-relaxed">
-                        <Markdown>{report.explanation}</Markdown>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Pozitívne faktory</h4>
-                        <ul className="space-y-2">
-                          {report.reassuringPoints.map((point, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span>{point}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      {report.riskFactors.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Rizikové faktory</h4>
-                          <ul className="space-y-2">
-                            {report.riskFactors.map((factor, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                                <AlertTriangle className={cn(
-                                  "w-4 h-4 shrink-0 mt-0.5",
-                                  statusColor === "red" ? "text-red-500" : "text-amber-500"
-                                )} />
-                                <span>{factor}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-
-                    {report.vtStats && (
-                      <div className="pt-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Výsledky VirusTotal</h4>
-                        <div className="p-4 bg-white/50 rounded-xl border border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                          <Tooltip content="Počet antivírusov, ktoré nenašli žiadnu hrozbu">
-                            <div className="text-center cursor-help">
-                              <p className="text-[10px] text-slate-400 uppercase font-bold">Nezistené</p>
-                              <p className="text-lg font-bold text-emerald-600">{report.vtStats.harmless + report.vtStats.undetected}</p>
-                            </div>
-                          </Tooltip>
-                          <Tooltip content="Počet antivírusov, ktoré označili odkaz za škodlivý">
-                            <div className="text-center cursor-help">
-                              <p className="text-[10px] text-slate-400 uppercase font-bold">Škodlivé</p>
-                              <p className={cn("text-lg font-bold", report.vtStats.malicious > 0 ? "text-red-600" : "text-slate-400")}>{report.vtStats.malicious}</p>
-                            </div>
-                          </Tooltip>
-                          <Tooltip content="Počet antivírusov, ktoré označili odkaz za podozrivý">
-                            <div className="text-center cursor-help">
-                              <p className="text-[10px] text-slate-400 uppercase font-bold">Podozrivé</p>
-                              <p className={cn("text-lg font-bold", report.vtStats.suspicious > 0 ? "text-amber-600" : "text-slate-400")}>{report.vtStats.suspicious}</p>
-                            </div>
-                          </Tooltip>
-                          <Tooltip content="Celkový počet testovaných antivírusových motorov">
-                            <div className="text-center cursor-help">
-                              <p className="text-[10px] text-slate-400 uppercase font-bold">Celkovo</p>
-                              <p className="text-lg font-bold text-slate-600">70+</p>
-                            </div>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <Tooltip content="Informácie o doméne a jej kategórii">
-                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500">
-                            <Lock className="w-5 h-5" />
-                          </div>
-                        </Tooltip>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900">{report.domainInfo.name}</p>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-tight">{report.domainInfo.category}</p>
-                        </div>
-                      </div>
-                      
-                      {report.isSafe && (
-                        <Tooltip content="Otvoriť odkaz v novej karte">
-                          <a 
-                            href={url.startsWith('http') ? url : `https://${url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
-                          >
-                            Otvoriť bezpečne
-                            <ExternalLink className="ml-2 w-4 h-4" />
-                          </a>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })()}
+            {report && !isAnalyzing && (
+              <SecurityReport report={report} url={url} />
+            )}
           </AnimatePresence>
         </div>
       </motion.div>
