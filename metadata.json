@@ -1,0 +1,5 @@
+{
+  "name": "SafeLink Verifier",
+  "description": "A tool to verify the safety of web links and provide reassuring security reports.",
+  "requestFramePermissions": []
+}
